@@ -22,6 +22,15 @@ func main() {
 	slackToken := os.Getenv("SLACK_TOKEN")
 	channelID := os.Getenv("CHANNEL_ID")
 
+	if slackToken == "" {
+		fmt.Println("Error: SLACK_TOKEN is not set")
+		os.Exit(1)
+	}
+	if channelID == "" {
+		fmt.Println("Error: CHANNEL_ID is not set")
+		os.Exit(1)
+	}
+
 	// ニュースの取得
 	newsList, err := fetchNews()
 	if err != nil {
