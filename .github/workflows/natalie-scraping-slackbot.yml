@@ -15,14 +15,15 @@ jobs:
       - name: Go のセットアップ
         uses: actions/setup-go@v4
         with:
-          go-version: 1.21  # 適切なバージョンを指定
+          go-version: 1.23.0
 
-      - name: 環境変数の設定
+      - name: 環境変数の設定確認
         env:
           SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
           CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
         run: |
-          echo "SLACK_TOKEN and CHANNEL_ID are set"
+          echo "SLACK_TOKEN=${SLACK_TOKEN}"
+          echo "CHANNEL_ID=${CHANNEL_ID}"
 
       - name: スクリプトの実行
         env:

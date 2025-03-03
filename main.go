@@ -22,6 +22,8 @@ func main() {
 	slackToken := os.Getenv("SLACK_TOKEN")
 	channelID := os.Getenv("CHANNEL_ID")
 
+	fmt.Println(slackToken, channelID)
+
 	if slackToken == "" {
 		fmt.Println("Error: SLACK_TOKEN is not set")
 		os.Exit(1)
