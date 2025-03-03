@@ -2,7 +2,7 @@ name: Fetch Natalie News and Post to Slack
 
 on:
   schedule:
-    - cron: '53 15 * * *' # JST 19時に実行
+    - cron: '00 16 * * *' # JST 19時に実行
   workflow_dispatch:
 
 jobs:
