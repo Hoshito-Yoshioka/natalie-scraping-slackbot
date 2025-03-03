@@ -2,7 +2,7 @@ name: Fetch Natalie News and Post to Slack
 
 on:
   schedule:
-    - cron: '45 6 * * *' # JST 19時に実行
+    - cron: '00 16 * * *' # JST 19時に実行
   workflow_dispatch:
 
 jobs:
@@ -12,6 +12,9 @@ jobs:
     steps:
       - name: リポジトリのチェックアウト
         uses: actions/checkout@v4
+      
+      - env:
+          TZ: 'Asia/Tokyo'
 
       - name: Go のセットアップ
         uses: actions/setup-go@v5
