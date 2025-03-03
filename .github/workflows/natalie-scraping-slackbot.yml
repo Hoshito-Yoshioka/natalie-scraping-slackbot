@@ -1,0 +1,28 @@
+name: Fetch Natalie News and Post to Slack
+
+on:
+  schedule:
+    - cron: '45 6 * * *' # JST 19時に実行
+  workflow_dispatch:
+
+jobs:
+  scrape_and_post:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: リポジトリのチェックアウト
+        uses: actions/checkout@v4
+
+      - name: Go のセットアップ
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.0' # 最新のGoバージョンを指定
+
+      - name: 依存関係の取得
+        run: go mod tidy
+
+      - name: スクリプトの実行
+        env:
+          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+          CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
+        run: go run main.go

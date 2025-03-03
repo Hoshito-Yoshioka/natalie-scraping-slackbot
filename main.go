@@ -8,100 +8,96 @@ import (
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/joho/godotenv"
 	"github.com/slack-go/slack"
 )
 
-// ニューススクレイピング関数
-func scrapeNatalieNews() ([]string, error) {
-	url := "https://natalie.mu/music/news"
-	resp, err := http.Get(url)
+const (
+	URL         string = "https://natalie.mu/music/news"
+	NEWS_TO_GET int    = 15
+)
+
+func main() {
+
+	// Slack トークンとチャンネルIDの取得
+	slackToken := os.Getenv("SLACK_TOKEN")
+	channelID := os.Getenv("CHANNEL_ID")
+
+	// ニュースの取得
+	newsList, err := fetchNews()
 	if err != nil {
-		return nil, fmt.Errorf("サイトへのアクセスに失敗: %v", err)
+		postToSlack(slackToken, channelID, "ニュース取得に失敗しました。")
+		return
+	}
+
+	// Slackへの投稿
+	err = postToSlack(slackToken, channelID, formatNewsForSlack(newsList))
+	if err != nil {
+		log.Fatalf("Failed to post message to Slack: %v", err)
+	}
+}
+
+// ニュースを取得する関数
+func fetchNews() ([]string, error) {
+	resp, err := http.Get(URL)
+	if err != nil {
+		return nil, err
 	}
 	defer resp.Body.Close()
 
-	// goqueryでHTMLを解析
+	// レスポンスの確認を強化
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to fetch the page: %s", resp.Status)
+	}
+	if !strings.Contains(resp.Header.Get("Content-Type"), "text/html") {
+		return nil, fmt.Errorf("invalid content type: %s", resp.Header.Get("Content-Type"))
+	}
+
 	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("HTML解析に失敗: %v", err)
+		return nil, err
 	}
 
 	var newsList []string
-	// 取得したニュースを配列に追加
-	doc.Find(".NA_card").Each(func(i int, s *goquery.Selection) {
-		// 15件以上でループ終了
-		if len(newsList) >= 15 {
-			return
+	doc.Find(".NA_card").EachWithBreak(func(i int, s *goquery.Selection) bool {
+		if i >= NEWS_TO_GET {
+			return false // 指定数に達したら終了
 		}
 
-		link, exists := s.Find("a").Attr("href")
-		if !exists || !strings.Contains(link, "/music/news/") {
-			return
+		// "NA_card_link NA_card_link-tag" を除外して <a> タグを取得
+		linkTag := s.Find("a[href]").Last() // 最後の <a> タグを取得
+		link, exists := linkTag.Attr("href")
+		if !exists || strings.Contains(link, "NA_card_link-tag") {
+			return true // 不要なリンクならスキップ
 		}
 
+		// 記事タイトルを取得
 		title := s.Find(".NA_card_title").Text()
-		fullLink := "https://natalie.mu" + link
+		if title == "" {
+			title = strings.TrimSpace(s.Find("h3, p").First().Text())
+		}
 
-		// フォーマットしてリストに追加
-		newsList = append(newsList, fmt.Sprintf("<%s|%s>", fullLink, title))
+		// URLを絶対パスに修正
+		if !strings.HasPrefix(link, "http") {
+			link = "https://natalie.mu" + link
+		}
+
+		// Slackフォーマットで追加（連番付き）
+		newsList = append(newsList, fmt.Sprintf("%d. <%s|%s>", i+1, link, title))
+
+		return true
 	})
-
-	// 実際に追加されたニュースの件数を確認
-	if len(newsList) < 15 {
-		log.Printf("ニュースは%d件しか取得できませんでした。", len(newsList))
-	}
-
-	return newsList, nil
+	return newsList, err
 }
 
-// Slackに送信する関数
-func postToSlack(newsList []string, slackToken string) error {
+// Slackに投稿するためのフォーマットを整える関数
+func formatNewsForSlack(newsList []string) string {
+	return fmt.Sprintf(":musical_note: 最新ニュースはこちらです :musical_note:\n\n%s\n以上が本日のニュースです！:loudspeaker:",
+		strings.Join(newsList, "\n\n"))
+}
+
+// Slackへ投稿する関数
+func postToSlack(slackToken, channelID, message string) error {
 	api := slack.New(slackToken)
-	message := "🎵 最新ニュースはこちらです 🎵\n"
-
-	// 取得したニュースが15件未満でも、残りを埋める
-	for len(newsList) < 15 {
-		// ニュースリストに「記事がありません」というエントリを追加
-		newsList = append(newsList, "記事がありません")
-	}
-
-	// 1〜15の番号を付けて投稿
-	var numberedNewsList []string
-	for i, news := range newsList[:15] {
-		numberedNewsList = append(numberedNewsList, fmt.Sprintf("%d. %s", i+1, news))
-	}
-
-	message += strings.Join(numberedNewsList, "\n\n") + "\n\n以上が本日のニュースです！📢"
-
-	_, _, err := api.PostMessage(os.Getenv("CHANNEL_ID"), slack.MsgOptionText(message, false))
+	_, _, err := api.PostMessage(channelID, slack.MsgOptionText(message, false))
 	return err
-}
-
-func main() {
-	// .envファイルを読み込み
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal(".envの読み込みに失敗しました")
-	}
-
-	// Slackトークン取得
-	slackToken := os.Getenv("SLACK_TOKEN")
-	if slackToken == "" {
-		log.Fatal("Slackトークンが設定されていません")
-	}
-
-	// ニュース取得
-	news, err := scrapeNatalieNews()
-	if err != nil {
-		log.Fatal("ニュース取得エラー:", err)
-	}
-
-	// Slackへ送信
-	err = postToSlack(news, slackToken)
-	if err != nil {
-		log.Fatal("Slack送信エラー:", err)
-	}
-
-	fmt.Println("ニュースをSlackに送信しました。")
 }
