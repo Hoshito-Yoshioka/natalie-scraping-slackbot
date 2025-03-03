@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/joho/godotenv"
 	"github.com/slack-go/slack"
 )
 
@@ -18,11 +17,6 @@ const (
 )
 
 func main() {
-	// .env ファイルの読み込み
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
 
 	// Slack トークンとチャンネルIDの取得
 	slackToken := os.Getenv("SLACK_TOKEN")
