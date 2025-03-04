@@ -9,6 +9,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      - name: [デバッグ] YAML 読み込み確認
+        run: echo "✅ This is the latest version of YAML"
+
       - name: リポジトリのチェックアウト
         uses: actions/checkout@v3
 
@@ -17,17 +20,10 @@ jobs:
         with:
           go-version: 1.23.0
 
-      - name: 環境変数の設定確認
-        env:
-          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
-          CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
+      - name: 環境変数のデバッグ
         run: |
           echo "SLACK_TOKEN length: ${#SLACK_TOKEN}"
           echo "CHANNEL_ID length: ${#CHANNEL_ID}"
-
-      - name: スクリプトの実行
         env:
           SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
           CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
-        run: 
-          go run main.go
