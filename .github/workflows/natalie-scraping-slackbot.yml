@@ -22,11 +22,12 @@ jobs:
           SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
           CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
         run: |
-          echo "SLACK_TOKEN=${SLACK_TOKEN}"
-          echo "CHANNEL_ID=${CHANNEL_ID}"
+          echo "SLACK_TOKEN length: ${#SLACK_TOKEN}"
+          echo "CHANNEL_ID length: ${#CHANNEL_ID}"
 
       - name: スクリプトの実行
         env:
           SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
           CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
-        run: go run main.go
+        run: 
+          SLACK_TOKEN=${{ secrets.SLACK_TOKEN }} CHANNEL_ID=${{ secrets.CHANNEL_ID }} go run main.go
