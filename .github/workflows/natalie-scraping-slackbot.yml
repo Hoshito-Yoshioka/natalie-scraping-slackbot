@@ -30,4 +30,4 @@ jobs:
           SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
           CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
         run: 
-          SLACK_TOKEN=${{ secrets.SLACK_TOKEN }} CHANNEL_ID=${{ secrets.CHANNEL_ID }} go run main.go
+          go run main.go
