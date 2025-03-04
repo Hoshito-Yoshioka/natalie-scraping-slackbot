@@ -88,7 +88,7 @@ func fetchNews() ([]string, error) {
 			link = "https://natalie.mu" + link
 		}
 
-		// Slackフォーマットで追加（タイトルの前にナンバリングを追加）
+		// ニュースを出力用の配列に追加（タイトルの前にナンバリングを追加）
 		newsList = append(newsList, fmt.Sprintf("%d. <%s|%s>", i+1, link, title))
 
 		return true
