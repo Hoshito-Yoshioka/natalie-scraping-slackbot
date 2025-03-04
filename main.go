@@ -22,24 +22,22 @@ func main() {
 	slackToken := os.Getenv("SLACK_TOKEN")
 	channelID := os.Getenv("CHANNEL_ID")
 
-	fmt.Println(slackToken, channelID) // logging あとでけす
-
-	if slackToken == "" { // logging あとでけす
+	if slackToken == "" {
 		fmt.Println("Error: SLACK_TOKEN is not set")
 		os.Exit(1)
 	}
-	if channelID == "" { // logging あとでけす
+	if channelID == "" {
 		fmt.Println("Error: CHANNEL_ID is not set")
 		os.Exit(1)
 	}
 
 	newsList, err := fetchNews()
 	if err != nil {
-		postToSlack(slackToken, channelID, "ニュース取得に失敗しました。")
+		postNews(slackToken, channelID, "Error: Failed to fetch news")
 		return
 	}
 
-	err = postToSlack(slackToken, channelID, formatNewsForSlack(newsList))
+	err = postNews(slackToken, channelID, formatNews(newsList))
 	if err != nil {
 		log.Fatalf("Failed to post message to Slack: %v", err)
 	}
@@ -97,13 +95,13 @@ func fetchNews() ([]string, error) {
 }
 
 // Slackに投稿するためのフォーマットを整える
-func formatNewsForSlack(newsList []string) string {
-	return fmt.Sprintf(":musical_note: 最新ニュースはこちらです :musical_note:\n\n%s\n以上が本日のニュースです！:loudspeaker:",
+func formatNews(newsList []string) string {
+	return fmt.Sprintf(":musical_note: 最新ニュースはこちらです :musical_note:\n\n%s\n\n以上が本日のニュースです！:loudspeaker:",
 		strings.Join(newsList, "\n\n"))
 }
 
 // Slackへ投稿
-func postToSlack(slackToken, channelID, message string) error {
+func postNews(slackToken, channelID, message string) error {
 	api := slack.New(slackToken)
 	_, _, err := api.PostMessage(channelID, slack.MsgOptionText(message, false))
 	return err
