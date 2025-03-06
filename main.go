@@ -49,7 +49,7 @@ func main() {
 func fetchNews() ([]string, error) {
 	res, err := http.Get(URL)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ニュースページへのリクエストに失敗しました: %v", err)
 	}
 	defer res.Body.Close()
 
@@ -96,7 +96,7 @@ func fetchNews() ([]string, error) {
 		return nil, fmt.Errorf("ニュースが見つかりませんでした")
 	}
 
-	return newsList, err
+	return newsList, nil
 }
 
 // Slackに投稿するためのフォーマットを整える
