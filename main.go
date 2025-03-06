@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	URL         string = "https://natalie.mu/music/news"
-	NEWS_TO_GET int    = 15
+	URL         string = "https://natalie.mu/music/news" // 音楽ナタリー"最新ニュース"ページ
+	NEWS_TO_GET int    = 15                              // ニュースの取得上限件数
 )
 
 func main() {
@@ -23,56 +23,57 @@ func main() {
 	channelID := os.Getenv("CHANNEL_ID")
 
 	if slackToken == "" {
-		fmt.Println("Error: SLACK_TOKEN is not set")
-		os.Exit(1)
+		log.Fatal("Error: SLACK_TOKEN is not set")
 	}
 	if channelID == "" {
-		fmt.Println("Error: CHANNEL_ID is not set")
-		os.Exit(1)
+		log.Fatal("Error: CHANNEL_ID is not set")
 	}
 
+	// ニュースの取得
 	newsList, err := fetchNews()
 	if err != nil {
-		postNews(slackToken, channelID, "Error: Failed to fetch news")
+		log.Printf("Error: Failed to fetch news: %v", err)
+		postNews(slackToken, channelID, fmt.Sprintf("本日のニュース取得に失敗しました... :cry:\n\nエラー: ```%v```", err))
 		return
 	}
 
+	// ニュースの投稿
 	err = postNews(slackToken, channelID, formatNews(newsList))
 	if err != nil {
-		log.Fatalf("Failed to post message to Slack: %v", err)
+		log.Printf("Error: Failed to post news: %v", err)
+		return
 	}
 }
 
 // ニュースを取得する
 func fetchNews() ([]string, error) {
-	resp, err := http.Get(URL)
+	res, err := http.Get(URL)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer res.Body.Close()
 
 	// レスポンスの確認
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("ページアクセスに失敗しました: %s", resp.Status)
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("ページアクセスに失敗しました。 ステータスコード: %s", res.Status)
 	}
 
 	// ドキュメント取得
-	doc, err := goquery.NewDocumentFromReader(resp.Body)
+	doc, err := goquery.NewDocumentFromReader(res.Body)
 	if err != nil {
 		return nil, err
 	}
 
 	var newsList []string
-	doc.Find(".NA_card").EachWithBreak(func(i int, s *goquery.Selection) bool {
-		if i >= NEWS_TO_GET {
-			return false // 指定数に達したら終了
-		}
+	selection := doc.Find(".NA_card")
+	for i := 0; i < selection.Length() && i < NEWS_TO_GET; i++ {
+		s := selection.Eq(i)
 
 		// "NA_card_link NA_card_link-tag" を除外して<a>タグを取得
-		linkTag := s.Find("a[href]").Last() // 複数の<a>タグが入る場合があるので最後の<a>タグを取得
+		linkTag := s.Find("a[href]").Last()
 		link, exists := linkTag.Attr("href")
 		if !exists || strings.Contains(link, "NA_card_link-tag") {
-			return true // 不要なリンクをスキップ
+			continue // 不要なリンクをスキップ
 		}
 
 		// 記事タイトルを取得
@@ -81,16 +82,20 @@ func fetchNews() ([]string, error) {
 			title = strings.TrimSpace(s.Find("h3, p").First().Text())
 		}
 
-		// URLを絶対パスに修正
+		// リンクを絶対パスに修正
 		if !strings.HasPrefix(link, "http") {
 			link = "https://natalie.mu" + link
 		}
 
-		// ニュースを出力用の配列に追加（タイトルの前にナンバリングを追加）
+		// ニュースを出力用の配列に追加
 		newsList = append(newsList, fmt.Sprintf("%d. <%s|%s>", i+1, link, title))
+	}
 
-		return true
-	})
+	// ループ処理でニュースが取得できていなかった場合
+	if len(newsList) == 0 {
+		return nil, fmt.Errorf("ニュースが見つかりませんでした")
+	}
+
 	return newsList, err
 }
 
