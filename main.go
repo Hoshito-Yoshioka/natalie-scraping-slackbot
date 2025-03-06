@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	URL         string = "https://natalie.mu/music/news"
-	NEWS_TO_GET int    = 15
+	URL         string = "https://natalie.mu/music/news" // 音楽ナタリー"最新ニュース"ページ
+	NEWS_TO_GET int    = 15                              // ニュースの取得上限件数
 )
 
 func main() {
@@ -22,59 +22,58 @@ func main() {
 	slackToken := os.Getenv("SLACK_TOKEN")
 	channelID := os.Getenv("CHANNEL_ID")
 
-	fmt.Println(slackToken, channelID) // logging あとでけす
-
-	if slackToken == "" { // logging あとでけす
-		fmt.Println("Error: SLACK_TOKEN is not set")
-		os.Exit(1)
+	if slackToken == "" {
+		log.Fatal("Error: SLACK_TOKEN is not set")
 	}
-	if channelID == "" { // logging あとでけす
-		fmt.Println("Error: CHANNEL_ID is not set")
-		os.Exit(1)
+	if channelID == "" {
+		log.Fatal("Error: CHANNEL_ID is not set")
 	}
 
+	// ニュースの取得
 	newsList, err := fetchNews()
 	if err != nil {
-		postToSlack(slackToken, channelID, "ニュース取得に失敗しました。")
+		log.Printf("Error: Failed to fetch news: %v", err)
+		postNews(slackToken, channelID, fmt.Sprintf("本日のニュース取得に失敗しました... :cry:\n\nエラー: ```%v```", err))
 		return
 	}
 
-	err = postToSlack(slackToken, channelID, formatNewsForSlack(newsList))
+	// ニュースの投稿
+	err = postNews(slackToken, channelID, formatNews(newsList))
 	if err != nil {
-		log.Fatalf("Failed to post message to Slack: %v", err)
+		log.Printf("Error: Failed to post news: %v", err)
+		return
 	}
 }
 
 // ニュースを取得する
 func fetchNews() ([]string, error) {
-	resp, err := http.Get(URL)
+	res, err := http.Get(URL)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer res.Body.Close()
 
 	// レスポンスの確認
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("ページアクセスに失敗しました: %s", resp.Status)
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("ページアクセスに失敗しました。 ステータスコード: %s", res.Status)
 	}
 
 	// ドキュメント取得
-	doc, err := goquery.NewDocumentFromReader(resp.Body)
+	doc, err := goquery.NewDocumentFromReader(res.Body)
 	if err != nil {
 		return nil, err
 	}
 
 	var newsList []string
-	doc.Find(".NA_card").EachWithBreak(func(i int, s *goquery.Selection) bool {
-		if i >= NEWS_TO_GET {
-			return false // 指定数に達したら終了
-		}
+	selection := doc.Find(".NA_card")
+	for i := 0; i < selection.Length() && i < NEWS_TO_GET; i++ {
+		s := selection.Eq(i)
 
 		// "NA_card_link NA_card_link-tag" を除外して<a>タグを取得
-		linkTag := s.Find("a[href]").Last() // 複数の<a>タグが入る場合があるので最後の<a>タグを取得
+		linkTag := s.Find("a[href]").Last()
 		link, exists := linkTag.Attr("href")
 		if !exists || strings.Contains(link, "NA_card_link-tag") {
-			return true // 不要なリンクをスキップ
+			continue // 不要なリンクをスキップ
 		}
 
 		// 記事タイトルを取得
@@ -83,27 +82,31 @@ func fetchNews() ([]string, error) {
 			title = strings.TrimSpace(s.Find("h3, p").First().Text())
 		}
 
-		// URLを絶対パスに修正
+		// リンクを絶対パスに修正
 		if !strings.HasPrefix(link, "http") {
 			link = "https://natalie.mu" + link
 		}
 
-		// ニュースを出力用の配列に追加（タイトルの前にナンバリングを追加）
+		// ニュースを出力用の配列に追加
 		newsList = append(newsList, fmt.Sprintf("%d. <%s|%s>", i+1, link, title))
+	}
 
-		return true
-	})
+	// ループ処理でニュースが取得できていなかった場合
+	if len(newsList) == 0 {
+		return nil, fmt.Errorf("ニュースが見つかりませんでした")
+	}
+
 	return newsList, err
 }
 
 // Slackに投稿するためのフォーマットを整える
-func formatNewsForSlack(newsList []string) string {
-	return fmt.Sprintf(":musical_note: 最新ニュースはこちらです :musical_note:\n\n%s\n以上が本日のニュースです！:loudspeaker:",
+func formatNews(newsList []string) string {
+	return fmt.Sprintf(":musical_note: 最新ニュースはこちらです :musical_note:\n\n%s\n\n以上が本日のニュースです！:loudspeaker:",
 		strings.Join(newsList, "\n\n"))
 }
 
 // Slackへ投稿
-func postToSlack(slackToken, channelID, message string) error {
+func postNews(slackToken, channelID, message string) error {
 	api := slack.New(slackToken)
 	_, _, err := api.PostMessage(channelID, slack.MsgOptionText(message, false))
 	return err
