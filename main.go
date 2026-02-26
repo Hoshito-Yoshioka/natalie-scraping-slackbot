@@ -13,7 +13,7 @@ import (
 
 const (
 	URL         string = "https://natalie.mu/music/news" // 音楽ナタリー"最新ニュース"ページ
-	NEWS_TO_GET int    = 15                              // ニュースの取得上限件数
+	NewsToGet int    = 15                              // ニュースの取得上限件数
 )
 
 func main() {
@@ -66,7 +66,7 @@ func fetchNews() ([]string, error) {
 
 	var newsList []string
 	selection := doc.Find(".NA_card")
-	for i := 0; i < selection.Length() && i < NEWS_TO_GET; i++ {
+	for i := 0; i < selection.Length() && i < NewsToGet; i++ {
 		s := selection.Eq(i)
 
 		// "NA_card_link NA_card_link-tag" を除外して<a>タグを取得
