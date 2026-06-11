@@ -59,6 +59,4 @@ export CHANNEL_ID="YOUR_SLACK_CHANNEL_ID"
 
 [Hoshito-Yoshioka](https://github.com/Hoshito-Yoshioka)
 
-## ライセンス
 
-[LICENSE](LICENSE) (もし存在する場合)
