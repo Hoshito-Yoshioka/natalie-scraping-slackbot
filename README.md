@@ -18,11 +18,13 @@
 ## 環境変数の設定
 
 以下の環境変数を設定する必要があります。
+envファイル、またはgithub actions実行の場合はGithub SECRETSに変数を登録してください。
 
 - `SLACK_TOKEN`: Slack Botのトークン。
 - `CHANNEL_ID`: ニュースを投稿するSlackチャンネルのID。
 
 例:
+
 ```bash
 export SLACK_TOKEN="xoxb-YOUR_SLACK_BOT_TOKEN"
 export CHANNEL_ID="YOUR_SLACK_CHANNEL_ID"
@@ -31,12 +33,14 @@ export CHANNEL_ID="YOUR_SLACK_CHANNEL_ID"
 ## インストールと実行方法
 
 1.  このリポジトリをクローンします。
+
     ```bash
     git clone https://github.com/Hoshito-Yoshioka/natalie-scraping-slackbot.git
     cd natalie-scraping-slackbot
     ```
 
 2.  依存関係を解決します。
+
     ```bash
     go mod tidy
     ```
@@ -52,8 +56,8 @@ export CHANNEL_ID="YOUR_SLACK_CHANNEL_ID"
 
 このプロジェクトは以下のGoライブラリに依存しています。
 
--   `github.com/PuerkitoBio/goquery`: HTMLドキュメントの解析とスクレイピングのため。
--   `github.com/slack-go/slack`: Slack APIとの連携のため。
+- `github.com/PuerkitoBio/goquery`: HTMLドキュメントの解析とスクレイピングのため。
+- `github.com/slack-go/slack`: Slack APIとの連携のため。
 
 ## 開発者
 
